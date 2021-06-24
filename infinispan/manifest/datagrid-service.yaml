@@ -1,0 +1,35 @@
+apiVersion: infinispan.org/v1
+kind: Infinispan
+metadata:
+  name: example-infinispan
+  annotations:
+    infinispan.org/monitoring: 'true'
+spec:
+  replicas: 1
+  service:
+#    type: DataGrid
+    type: Cache
+    replicationFactor: 2
+  autoscale:
+    disabled: true
+    maxMemUsagePercent: 70
+    maxReplicas: 5
+    minMemUsagePercent: 30
+    minReplicas: 2
+  security:
+    endpointSecretName: example-infinispan-identities
+    endpointEncryption:
+      type: Secret
+      certSecretName: example-infinispan-tls
+  container:
+#    extraJvmOpts: "-XX:NativeMemoryTracking=summary"
+    cpu: 500m
+    memory: 512Mi
+#  logging:
+#    categories:
+#      org.infinispan: info
+#      org.jgroups: debug
+  expose:
+    type: LoadBalancer
+#    type: Route
+#    host: myhostname.domain.com

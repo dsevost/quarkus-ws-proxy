@@ -3,4 +3,3 @@
 **/infinispan-server*/**
 **/mvnw*
 **/target/
-!infinispan-server-instance
