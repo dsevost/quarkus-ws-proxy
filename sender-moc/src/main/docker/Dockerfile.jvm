@@ -1,0 +1,21 @@
+FROM image-registry.openshift-image-registry.svc:5000/dsevosty-quarkus-ws-dev/java-11-base
+# FROM registry.access.redhat.com/ubi8/openjdk-11-runtime
+
+ENV \
+    TRUST_STORE_PATH="/deployments/cert/trustStore.jks" \
+    TRUST_STORE_PASSWD="1234567890"
+
+ENV \
+    TRUST_STORE="-Djavax.net.ssl.trustStore=$TRUST_STORE_PATH -Djavax.net.ssl.trustStorePassword=$TRUST_STORE_PASSWD"
+
+ENV \
+    JAVA_OPTIONS="-Dquarkus.http.host=0.0.0.0 -Dquarkus.http.port=8080 -Dquarkus.http.ssl-port=8443 -Dquarkus.grpc.server.port=9000 -Djava.util.logging.manager=org.jboss.logmanager.LogManager $TRUST_STORE"
+
+COPY target/lib/* /deployments/lib/
+COPY target/*-runner.jar /deployments/app.jar
+
+# HTTP, HTTPS, gRPC
+EXPOSE 8080 8443 9000
+# USER 1001
+
+ENTRYPOINT [ "/deployments/run-java.sh" ]

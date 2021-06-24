@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.redhat.qws.model.grpc";
+option java_outer_classname = "ModelProto";
+
+package model;
+
+message Message {
+    string from = 1;
+    int64 date = 2;
+    string body = 3;
+}
+
+message MessageExchange {
+    model.SmartClientContext client = 1;
+    model.Message message = 2;
+}
+
+message Respond {
+    int32 httpReturnCode = 1;
+    Message message = 2;
+}
+
+message SmartClientContext {
+    UserContext user = 1;
+    string clientId = 2;
+}
+
+message UserContext {
+    string name = 1;
+}

@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.redhat.qws.sender.grpc";
+option java_outer_classname = "SmartClientProto";
+
+package sender;
+
+import public "model.proto";
+
+service SmartClient {
+    rpc subscribe(SmartClientContextWithIP) returns (model.Respond) {}
+    rpc unsubscribe(SmartClientContextWithIP) returns (model.Respond) {}
+    rpc store(model.MessageExchange) returns (model.Respond) {}
+}
+
+message SmartClientContextWithIP {
+    model.SmartClientContext client = 1;
+    string ip = 2;
+}

@@ -1,0 +1,9 @@
+{
+    "client": {
+        "user": {
+            "name": "u-test-01"
+        },
+        "clientId": "cid-test-01"
+    },
+    "ip": "1.2.3.4"
+}

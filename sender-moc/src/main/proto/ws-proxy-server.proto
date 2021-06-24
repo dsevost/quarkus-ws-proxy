@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.redhat.qws.proxy.grpc";
+option java_outer_classname = "WSProxyServerProto";
+
+package proxy;
+
+import public "model.proto";
+
+service WSProxy {
+    rpc handleMessage(model.MessageExchange) returns (model.Respond) {}
+}

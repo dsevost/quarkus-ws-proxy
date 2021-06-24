@@ -1,0 +1,150 @@
+<html>
+
+<head>
+    <title>WebSocket: Say Hello</title>
+    <style>
+        .error {
+            color: red;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .working {
+            color: blue;
+        }
+
+        .success {
+            color: green;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 2px;
+            padding-right: 3px;
+            padding-left: 3px;
+        }
+    </style>
+    <script type="text/javascript">
+        var websocket = null;
+        function connect() {
+
+            displayStatus('Progressing...', 'working');
+            var user = document.getElementById('user').value;
+            var clientId = document.getElementById('client').value;
+            var wsURI = 'wss://' + window.location.host + '/stream/' + user + "/" + clientId;
+            // displayMessage('Connecting: ' + wsURI);
+            var start = new Date();
+            websocket = new WebSocket(wsURI);
+
+            websocket.onopen = function () {
+                var spent = (new Date()).getTime() - start.getTime();
+                displayStatus('Open', 'success');
+                displayMessage('Connected: ' + wsURI + ', time spent (ms): ' + spent);
+            };
+
+            websocket.onmessage = function (event) {
+                displayMessage(event.data);
+            };
+
+            websocket.onerror = function (event) {
+                displayMessage('Error: ' + event.data);
+            };
+
+            websocket.onclose = function (event) {
+                displayStatus('Closed', 'error');
+                if (websocket !== null) {
+                    displayMessage('Disconnected: ' + event.reason + '(' + event.code + '), reconnecting...');
+                    setTimeout(
+                        () => connect()
+                        ,
+                        function () {
+                            if (event.code == 1012) { // SERVICE_RESTART (session dropped due to it's too old)
+                                return 1;
+                            } else if (event.code == 1013) { // TRY_AGAIN_LATER (backand unavailable)
+                                return 20000;
+                            } else if (event.code == 1006) { // CLOSED_ABNORMALLY (local/browser error)
+                                return 5000;
+                            } else if (event.code == 1001) {
+                                return 10000; // NORMAL_CLOSURE (reason unknown)
+                            } else {
+                                return 10000; // else
+                            }
+                        }
+                    );
+                } else {
+                    displayMessage('Disconnected: connection terminated by user');
+                }
+            };
+        }
+
+        function disconnect() {
+            if (websocket !== null) {
+                websocket.close();
+                websocket = null;
+            }
+        }
+
+        // function sendMessage() {
+        //     if (websocket !== null) {
+        //         var content = document.getElementById('name').value;
+        //         websocket.send(content);
+        //     } else {
+        //         displayMessage('WebSocket connection is not established. Please click the Open Connection button.', 'error');
+        //     }
+        // }
+
+        function displayMessage(data) {
+            var out = document.getElementById('messages');
+            out.innerHTML += data;
+            try {
+                var message = JSON.parse(data);
+                var now = (new Date()).getTime();
+                var rdate = message.date;
+                rdate = rdate.substring(0, rdate.indexOf('[UTC'));
+                out.innerHTML += ", delivering time(ms) to local client/browser: " + (now - Date.parse(rdate));
+            } catch (ex) { }
+            out.innerHTML += "<br/>";
+            out.scrollTop += 100;
+        }
+
+        function displayStatus(status, style) {
+            var currentStatus = document.getElementById('currentstatus');
+            currentStatus.setAttribute("class", style);
+            currentStatus.value = status;
+        }
+    </script>
+</head>
+
+<body>
+    <div>
+        <h1>Red Hat build for Quarkus, WebSocket stream listener</h1>
+        <div id="connect-container">
+            <div>
+                <fieldset style='padding: 10px'>
+                    <legend>Connect or disconnect using websocket </legend>
+                    <table style="border: none; padding: 2px; text-align: right;">
+                        <tr>
+                            <td><label>User name</label></td>
+                            <td><input type="input" id="user" value="user-00001" /></td>
+                        </tr>
+                        <td><label>Client ID</label></td>
+                        <td><input type="input" id="client" value="client-00001" /></td>
+                    </table>
+                    <input type="button" id="connect" onclick="connect();" value="Open Connection" />
+                    <input type="button" id="disconnect" onclick="disconnect();" value="Close Connection" /><br /><br />
+                    <div>Current WebSocket Connection Status: <output id="currentstatus" class="error">Closed</output>
+                    </div>
+                </fieldset>
+            </div>
+            <div>
+                <fieldset>
+                    <legend>Received messages </legend>
+                    <div id="messages" style='overflow-y: scroll; width: 100%; height: 50%;'></div>
+                </fieldset>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

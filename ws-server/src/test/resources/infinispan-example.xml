@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<infinispan xmlns="urn:infinispan:config:11.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:infinispan:config:11.0 https://infinispan.org/schemas/infinispan-config-11.0.xsd">
+
+    <cache-container default-cache="default" statistics="true">
+        <local-cache name="default" />
+        <!-- local-cache statistics="true" name="quarkus">
+            <encoding>
+                <key media-type="application/x-protostream" />
+                <value media-type="application/x-protostream" />
+            </encoding>
+        </local-cache --> 
+    </cache-container>
+</infinispan>

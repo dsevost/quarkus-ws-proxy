@@ -1,0 +1,6 @@
+**/*.cmd
+**/.mvn/
+**/infinispan-server*/**
+**/mvnw*
+**/target/
+!infinispan-server-instance
