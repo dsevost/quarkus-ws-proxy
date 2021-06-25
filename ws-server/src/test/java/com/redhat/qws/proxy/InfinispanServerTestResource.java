@@ -98,6 +98,11 @@ public class InfinispanServerTestResource implements QuarkusTestResourceLifecycl
 
         HotRodServerConfigurationBuilder hrb = new HotRodServerConfigurationBuilder();
 
+        hrb.port(Integer.valueOf(HotRodServerProperties.HOTROD_SERVER_PORT.getValue()));
+
+        // ConfigurationBuilderHolder cbh = new
+        // ConfigurationBuilderHolder(getClass().getClassLoader(), gcb);
+        // hrb.adminOperationsHandler(new ServerAdminOperationsHandler(cbh));
         hrb.authentication().enable();
         SimpleServerAuthenticationProvider ssap = new SimpleServerAuthenticationProvider();
         ssap.addUser(userName, authRealm, userPassword.toCharArray());
@@ -122,7 +127,6 @@ public class InfinispanServerTestResource implements QuarkusTestResourceLifecycl
         // allow any name
         // hrb.ssl().sniHostName("127.0.0.1");
         server = new HotRodServer();
-
         // don't check configuration build(false)
         server.start(hrb.build(false), cm);
         LOGGER.infof("HOT ROD SERVER: %s, strtup time(ms) %s", server, System.currentTimeMillis() - start);
@@ -149,6 +153,7 @@ public class InfinispanServerTestResource implements QuarkusTestResourceLifecycl
                 "datagrid.pfx");
         static final HotRodServerProperties HOTROD_SERVER_KEYSTORE_PASSWD = factory("hotrod.server.keystore-password",
                 "changeit");
+        static final HotRodServerProperties HOTROD_SERVER_PORT = factory("hotrod.server.port", "11223");
         static final HotRodServerProperties HOTROD_SERVER_KEYSTORE_TYPE = factory("hotrod.server.truststore-type", "");
         static final HotRodServerProperties HOTROD_SERVER_TRUSTSTORE_FILE = factory("hotrod.server.truststore-file",
                 "trustStore.jks");
