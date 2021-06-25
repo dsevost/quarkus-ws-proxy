@@ -36,9 +36,6 @@ public class DatagridService {
     @ConfigProperty(name = "datagrid.debug.listener", defaultValue = "false")
     boolean debugListener;
 
-    @ConfigProperty(name = "datagrid.cache.force-create", defaultValue = "false")
-    boolean cacheCreateForce;
-
     @Inject
     RemoteCacheManager rcm;
 
@@ -72,36 +69,21 @@ public class DatagridService {
     }
 
     void onStart(@Observes StartupEvent ev) {
-        if (cacheCreateForce) {
-            LOGGER.infof("Trying to create cache: %s (datagrid.cache.force-create = true)", cacheName);
-            cache = rcm.administration().getOrCreateCache(cacheName, DefaultTemplate.DIST_SYNC);
-            LOGGER.debugf("RemoteCacheManager configuration: %s", rcm.getConfiguration());
-        } else {
-            if (datagridUsage) {
-                if (rcm == null) {
-                    RuntimeException e = new RuntimeException(
-                            "Property 'datagrid.use' set to 'true', but RemoteCache is NULL, it should never happaened in prod, just local testing enviroment case");
-                    LOGGER.error("Configuration error", e);
-                    throw e;
-                } else {
-                    cache = rcm.getCache(cacheName);
-                    if (cache == null) {
-                        throw new RuntimeException("Remote cache does not exist on server: " + cacheName);
-                    }
-                }
-            }
+        if (datagridUsage == false) {
+            LOGGER.infof("Datagrid will not be used, to use it set property '%s' to true", "datagrid.use");
+            return;
         }
-        if (debugListener && datagridUsage) {
+        cache = getCache();
+        if (cache == null) {
+            cache = rcm.administration().createCache(cacheName, DefaultTemplate.DIST_SYNC);
+        }
+        if (debugListener) {
             cache.addClientListener(new EventPrintListener());
         }
     }
 
-    RemoteCache<String, CachedMessage> getCache() {
+    private RemoteCache<String, CachedMessage> getCache() {
         if (cache == null) {
-            if (rcm == null) {
-                RuntimeException e = new RuntimeException("Remote Cache Manager is NULL");
-                LOGGER.warn(e);
-            }
             cache = rcm.getCache(cacheName);
         }
         return cache;

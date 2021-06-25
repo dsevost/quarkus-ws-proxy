@@ -112,12 +112,12 @@ public class WebSocketServerAdapter {
         public void handleCreatedEvent(ClientCacheEntryCreatedEvent<String> e) {
             LOGGER.debugf("Entity(%s) created", e.getKey());
             CompletableFuture<CachedMessage> cm = datagrid.getAsync(e.getKey());
-            cm.thenAccept(reply -> {
-                LOGGER.debugf("Datagrid returned: %s ", reply);
-                final String key = SmartClientContext.getSmartClientKey(reply.getUser(), reply.getClientId());
-                final Message message = new Message(reply.getFrom(), reply.getDatetime(), reply.getBody());
+            cm.thenAcceptAsync(create -> {
+                LOGGER.debugf("Datagrid returned (CREATE): %s ", create);
+                final String key = SmartClientContext.getSmartClientKey(create.getUser(), create.getClientId());
+                final Message message = new Message(create.getFrom(), create.getDatetime(), create.getBody());
                 send(key, message);
-                datagrid.removeAsync(e.getKey());
+                datagrid.removeAsync(e.getKey()).thenAccept(remove -> LOGGER.debugf("Datagrid returned (REMOVE): %s ", remove));
             });
         }
     }
@@ -291,7 +291,7 @@ public class WebSocketServerAdapter {
 
     @Scheduled(every = "{scheduler.every}")
     void closeConnection() {
-        LOGGER.debugf("Connection pruner started for every ",
+        LOGGER.debugf("Connection pruner started for every %s(sec)",
                 ConfigProvider.getConfig().getValue("scheduler.every", String.class));
         final Date prunerStart = new Date();
         long connectionPruned = 0;
