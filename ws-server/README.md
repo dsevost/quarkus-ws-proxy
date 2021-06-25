@@ -21,11 +21,16 @@ java "-Djavax.net.debug=all" "-Djavax.net.ssl.trustStore=$(pwd)/cert/trustStore.
 ```
 
 ### Prepare OpenShift objects
-```
+```shell script
 oc create secret generic ws-server-tls-config --from-file=ca.crt=cert/ca.crt --from-file=trustStore.jks=cert/trustStore.jks --from-file=ws-server.pfx=cert/ws-server.pfx --from-file=ws-server.crt=cert/ws-server.crt --from-file=ws-server.key=cert/ws-server.key
 oc create cm ws-server-app-properties --from-file=application.properties=src/main/resources/application.properties
 ```
 
-```
+```shell script
 mvn "-DskipTests=true" "-Dquarkus.kubernetes.deploy=true" package
+```
+
+### Just rebuild image
+```shell script
+ oc start-build ws-server --from-dir .
 ```
