@@ -25,8 +25,13 @@ grpcurl -insecure -v -d @ localhost:9000 sender.SmartClient/unsubscribe < smartc
 ```
 
 ### Prepare OpenShift objects
-```
+```shell script
 oc new-build --name java-11-base -D - < src/main/docker/Dockerfile.base
 oc create secret generic sender-tls-config --from-file=ca.crt=cert/ca.crt --from-file=trustStore.jks=cert/trustStore.jks --from-file=sender-moc.pfx=cert/sender-moc.pfx --from-file=sender-moc.crt=cert/sender-moc.crt --from-file=sender-moc.key=cert/sender-moc.key
 oc create cm sender-app-properties --from-file=application.properties=src/main/resources/application.properties
+```
+
+### Just rebuild image
+```shell script
+ oc start-build sender-moc --from-dir .
 ```
