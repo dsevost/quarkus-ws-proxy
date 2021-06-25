@@ -30,7 +30,7 @@
                 <security-realm name="default">
                     <server-identities>
                         <ssl>
-                            <keystore path="../../../cert/datagrid.pfx" relative-to="infinispan.server.config.path" keystore-password="1234567890" alias="datagrid" key-password="1234567890" />
+                            <keystore path="../../../infinispan/cert/datagrid.pfx" relative-to="infinispan.server.config.path" keystore-password="1234567890" alias="datagrid" key-password="1234567890" />
                         </ssl>
                     </server-identities>
                     <properties-realm groups-attribute="Roles">

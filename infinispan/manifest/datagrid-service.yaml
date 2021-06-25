@@ -1,9 +1,11 @@
+---
 apiVersion: infinispan.org/v1
 kind: Infinispan
 metadata:
-  name: example-infinispan
   annotations:
     infinispan.org/monitoring: 'true'
+  namespace: example-datagrid-instance
+  name: example-infinispan
 spec:
   replicas: 1
   service:

@@ -1,3 +1,4 @@
+---
 apiVersion: infinispan.org/v1
 kind: Infinispan
 metadata:

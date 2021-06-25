@@ -19,6 +19,8 @@ USER_PASSWORD=${USER_PASSWORD:-$(openssl rand -base64 10)}
 TMP_FILE=$(mktemp)
 
 sed "s/- username:.*/- username: $USER_NAME/ ; s,  password:.*,  password: $USER_PASSWORD, ; /^#.*$/d" $MANIFEST > $TMP_FILE
+cat $TMP_FILE
+echo "###"
 
 oc -n $TNS create secret generic ${DATAGRID_NAME}-identities -o yaml --dry-run \
 	--from-file=identities.yaml=$TMP_FILE
