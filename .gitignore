@@ -3,3 +3,4 @@
 **/infinispan-server*/**
 **/mvnw*
 **/target/
+infinispan-integration-server

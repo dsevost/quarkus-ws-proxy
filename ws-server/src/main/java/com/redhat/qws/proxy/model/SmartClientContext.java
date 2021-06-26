@@ -29,7 +29,7 @@ public class SmartClientContext {
     }
 
     @JsonbTransient
-    public String getSmartCleintKey() {
+    public String getSmartClientKey() {
         // if (key == null) {
         //     key = getSmartClientKey(this);
         // }

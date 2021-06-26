@@ -17,7 +17,6 @@ import javax.json.bind.JsonbBuilder;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.websocket.CloseReason;
-import javax.websocket.MessageHandler;
 import javax.websocket.CloseReason.CloseCodes;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
@@ -89,13 +88,13 @@ public class WebSocketServerAdapter {
 
     private boolean peerAvailability = false;
 
-    private DataCapure dc;
+    private DataCapture dc;
 
     @PostConstruct
     void init() {
         if (datagridUsage) {
             LOGGER.info("Using datagrid");
-            dc = new DataCapure();
+            dc = new DataCapture();
             datagrid.register(dc);
         } else {
             LOGGER.infof("Datagrid will not be used, to use it set property '%s' to true", "datagrid.use");
@@ -120,15 +119,25 @@ public class WebSocketServerAdapter {
     }
 
     @ClientListener
-    class DataCapure {
+    class DataCapture {
         @ClientCacheEntryCreated
         public void handleCreatedEvent(ClientCacheEntryCreatedEvent<String> e) {
-            LOGGER.debugf("Entity(%s) created", e.getKey());
-            CompletableFuture<CachedMessage> cm = datagrid.getAsync(e.getKey());
+            final String KEY = e.getKey();
+            LOGGER.debugf("Entity(%s) created", KEY);
+            // is client session present on this instance
+            final String clientKey = KEY.substring(0, KEY.lastIndexOf(':'));
+            if (sessions.get(clientKey) == null) {
+                LOGGER.debugf("Got notification not for my client %s, ignoring", clientKey);
+                return;
+            } else {
+                LOGGER.debugf("Processing message [%s] for my client, client key is: [%s]", KEY, clientKey);
+            }
+            CompletableFuture<CachedMessage> cm = datagrid.getAsync(KEY);
             cm.thenAcceptAsync(create -> {
                 LOGGER.debugf("Datagrid returned (CREATE): %s ", create);
                 final String key = SmartClientContext.getSmartClientKey(create.getUser(), create.getClientId());
                 final Message message = new Message(create.getFrom(), create.getDatetime(), create.getBody());
+                LOGGER.warnf("(%s) Transfering message [%s] to [%s]", getClass().getSimpleName(), message, clientKey);
                 send(key, message);
                 datagrid.removeAsync(e.getKey())
                         .thenAccept(remove -> LOGGER.debugf("Datagrid returned (REMOVE): %s ", remove));
@@ -237,13 +246,27 @@ public class WebSocketServerAdapter {
         final String key = SmartClientContext.getSmartClientKey(user, cid);
         sessions.remove(key);
         lifeTime.remove(session);
-        unsubscribe(user, cid);
         try {
             synchronized (session) {
-                session.close(new CloseReason(CloseCodes.UNEXPECTED_CONDITION, t.getMessage()));
+                if (isPeerEndpointUnreachable()) {
+                    final String message = "Backend not available, try again later";
+                    session.close(new CloseReason(CloseCodes.TRY_AGAIN_LATER, message));
+                } else {
+                    session.close(new CloseReason(CloseCodes.UNEXPECTED_CONDITION, t.getMessage()));
+                }
+            }
+            if (rpcProtocol.equalsIgnoreCase("REST")) {
+                LOGGER.warnf("REST unsubscribe: %d", restUnsubscribe(user, cid));
+            } else {
+                grpcScs.grpcMutinyUnsubscribe(user, cid, getRuntimeIP()).subscribe().with(reply -> {
+                    LOGGER.debugf("GrpcMutiny unsubscribe: %s", reply);
+                }, failure -> {
+                    setPeerEndpointUnreachable();
+                    LOGGER.warn("SmartClientGrpcServiceStub error", failure);
+                });
             }
         } catch (IOException e) {
-            LOGGER.debug(e);
+            LOGGER.debugf(e, "::onError(%s)", session.getId());
         }
     }
 
@@ -254,9 +277,9 @@ public class WebSocketServerAdapter {
     void send(/* @NotNull */Session session, @NotNull Message message) {
         if (session == null) {
             if (datagridUsage) {
-                LOGGER.warnf("WebSocket session is null, MESSAGE [%s] SAVED by datagrid", message);
+                LOGGER.warnf("WebSocket session is already null or not found, MESSAGE [%s] SAVED by datagrid", message);
             } else {
-                LOGGER.warnf("WebSocket session is null, MESSAGE [%s] LOST!", message);
+                LOGGER.warnf("WebSocket session is already null or not found, MESSAGE [%s] LOST!", message);
             }
             return;
         }
@@ -284,36 +307,12 @@ public class WebSocketServerAdapter {
         return restScs.subscribe(user, cid, getRuntimeIP());
     }
 
-    String unsubscribe(@NotBlank String user, @NotBlank String cid) {
-        final String message = "Backend not available, try again later";
-        if (isPeerEndpointUnreachable()) {
-            final Session session = sessions.get(SmartClientContext.getSmartClientKey(user, cid));
-            try {
-                session.close(new CloseReason(CloseCodes.TRY_AGAIN_LATER, message));
-            } catch (IOException e) {
-                LOGGER.debugf(e, "Error while closing session [%s]", session.getRequestURI());
-            }
-            return message;
-        }
-        try {
-            if (rpcProtocol.equalsIgnoreCase("REST")) {
-                return restUnsubscribe(user, cid);
-            } else {
-                return grpcScs.grpcBlockingUnsubscribe(user, cid, getRuntimeIP()).getMessage().getBody();
-            }
-        } catch (Exception e) {
-            setPeerEndpointUnreachable();
-            LOGGER.debug("SmartClientRestEndpoint error", e);
-            return message + ", reason: " + e.getMessage();
-        }
-    }
-
     String restUnsubscribe(String user, String cid) {
         return restScs.unsubscribe(user, cid, getRuntimeIP());
     }
 
     @Scheduled(every = "{scheduler.every}")
-    void cheConnectionAiveAndLifetimeEceeded() throws IOException {
+    void checkConnectionAiveAndLifetimeEceeded() throws IOException {
         LOGGER.debugf("Connection pruner started for every %s(sec)",
                 ConfigProvider.getConfig().getValue("scheduler.every", String.class));
         final Date prunerStart = new Date();
@@ -321,34 +320,28 @@ public class WebSocketServerAdapter {
         final long maxTime = wsConnectionMaxLifeTime * 1000;
         final long connectionsTotal = sessions.size();
         for (Session session : sessions.values()) {
-            final Date opened = lifeTime.get(session);
-            final long alive = (new Date()).getTime() - opened.getTime();
-            if (alive > maxTime) {
-                if (session.isOpen()) {
-                    // try {
-                    LOGGER.debugf("Session [%s] is too old %d, when maximux lifetime is %d, trying to close",
-                            session.getRequestURI(), alive / 1000, wsConnectionMaxLifeTime);
-                    session.close(new CloseReason(CloseCodes.SERVICE_RESTART, "Connection max lifetime reached"));
-                    lifeTime.remove(session);
-                    connectionPruned++;
-                    // } catch (IOException e) {
-                    // LOGGER.debug(e);
-                    // throw e;
-                    // }
+            synchronized (session) {
+                final Date opened = lifeTime.get(session);
+                final long alive = (new Date()).getTime() - opened.getTime();
+                if (alive > maxTime) {
+                    if (session.isOpen()) {
+                        LOGGER.debugf("Session [%s] is too old %d, when maximux lifetime is %d, trying to close",
+                                session.getRequestURI(), alive / 1000, wsConnectionMaxLifeTime);
+                        session.close(new CloseReason(CloseCodes.SERVICE_RESTART, "Connection max lifetime reached"));
+                        lifeTime.remove(session);
+                        connectionPruned++;
+                    }
+                } else {
+                    // will fail on browsers
+                    final ByteBuffer buf = ByteBuffer.allocate(Long.BYTES);
+                    buf.putLong(alive);
+                    session.getAsyncRemote().sendPing(buf);
                 }
-            } else {
-                final ByteBuffer buf = ByteBuffer.allocate(Long.BYTES);
-                buf.putLong(alive);
-                session.getAsyncRemote().sendPing(buf);
             }
         }
-        final String msg = String.format("Connections pruned: %d of %d, time spent: %d", connectionPruned,
+        final String msg = String.format("Connections pruned: %d of %d, time spent(ms): %d", connectionPruned,
                 connectionsTotal, new Date().getTime() - prunerStart.getTime());
-        if (connectionPruned > 0) {
-            LOGGER.warn(msg);
-        } else {
-            LOGGER.info(msg);
-        }
+        LOGGER.log(connectionPruned > 0 ? Logger.Level.WARN : Logger.Level.INFO, msg);
     }
 
     synchronized String getRuntimeIP() {
