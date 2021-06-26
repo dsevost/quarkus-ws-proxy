@@ -3,6 +3,7 @@ package com.redhat.qws.proxy;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -16,11 +17,13 @@ import javax.json.bind.JsonbBuilder;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.websocket.CloseReason;
+import javax.websocket.MessageHandler;
 import javax.websocket.CloseReason.CloseCodes;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
+import javax.websocket.PongMessage;
 import javax.websocket.RemoteEndpoint;
 import javax.websocket.Session;
 import javax.websocket.server.PathParam;
@@ -101,6 +104,16 @@ public class WebSocketServerAdapter {
 
     @PreDestroy
     void destroy() {
+        // it's done automatically by Quarkus, just for sending justification to client
+        for (Session s : sessions.values()) {
+            try {
+                LOGGER.debugf("Open session founs [%s], shutting it down gracefully", s.getRequestURI());
+                s.close(new CloseReason(CloseCodes.NORMAL_CLOSURE,
+                        String.format("Instance of %s is going to shutdown, please reconnect", this)));
+            } catch (IOException e) {
+                LOGGER.debugf("Websocker session close error on instance %s shutdown", this);
+            }
+        }
         if (datagridUsage) {
             datagrid.unregister(dc);
         }
@@ -117,7 +130,8 @@ public class WebSocketServerAdapter {
                 final String key = SmartClientContext.getSmartClientKey(create.getUser(), create.getClientId());
                 final Message message = new Message(create.getFrom(), create.getDatetime(), create.getBody());
                 send(key, message);
-                datagrid.removeAsync(e.getKey()).thenAccept(remove -> LOGGER.debugf("Datagrid returned (REMOVE): %s ", remove));
+                datagrid.removeAsync(e.getKey())
+                        .thenAccept(remove -> LOGGER.debugf("Datagrid returned (REMOVE): %s ", remove));
             });
         }
     }
@@ -161,6 +175,8 @@ public class WebSocketServerAdapter {
                 send(session, Message.from(this, message + ", reason: " + e.getMessage()));
             }
         }
+        session.addMessageHandler(PongMessage.class,
+                pong -> LOGGER.debugf("PONG received from client(%s): %s", session.getId(), pong.getApplicationData()));
     }
 
     void handleSubscribeResponseLambda(Respond reply, Session session) {
@@ -237,14 +253,23 @@ public class WebSocketServerAdapter {
 
     void send(/* @NotNull */Session session, @NotNull Message message) {
         if (session == null) {
-            LOGGER.warnf("WebSocket session is null, MESSAGE [%s] LOST!", message);
+            if (datagridUsage) {
+                LOGGER.warnf("WebSocket session is null, MESSAGE [%s] SAVED by datagrid", message);
+            } else {
+                LOGGER.warnf("WebSocket session is null, MESSAGE [%s] LOST!", message);
+            }
             return;
         }
         synchronized (session) {
             RemoteEndpoint.Async remote = session.getAsyncRemote();
             if (session.isOpen() != true || remote == null) {
-                LOGGER.warnf("Session closed [%s] or remote is null [%s], MESSAGE [%s] LOST! ", session, remote,
-                        message);
+                if (datagridUsage) {
+                    LOGGER.warnf("Session closed [%s] or its remote peer is null [%s], MESSAGE [%s] SAVED by datagrid ",
+                            session, remote, message);
+                } else {
+                    LOGGER.warnf("Session closed [%s] or its remote peer is null [%s], MESSAGE [%s] LOST! ", session,
+                            remote, message);
+                }
                 return;
             }
             remote.sendObject(message.toJson(), result -> {
@@ -288,7 +313,7 @@ public class WebSocketServerAdapter {
     }
 
     @Scheduled(every = "{scheduler.every}")
-    void closeConnection() {
+    void cheConnectionAiveAndLifetimeEceeded() throws IOException {
         LOGGER.debugf("Connection pruner started for every %s(sec)",
                 ConfigProvider.getConfig().getValue("scheduler.every", String.class));
         final Date prunerStart = new Date();
@@ -300,16 +325,21 @@ public class WebSocketServerAdapter {
             final long alive = (new Date()).getTime() - opened.getTime();
             if (alive > maxTime) {
                 if (session.isOpen()) {
-                    try {
-                        LOGGER.debugf("Session [%s] is too old %d, when maximux lifetime is %d, trying to close",
-                                session.getRequestURI(), alive / 1000, wsConnectionMaxLifeTime);
-                        session.close(new CloseReason(CloseCodes.SERVICE_RESTART, "Connection max lifetime reached"));
-                        lifeTime.remove(session);
-                        connectionPruned++;
-                    } catch (IOException e) {
-                        LOGGER.debug(e);
-                    }
+                    // try {
+                    LOGGER.debugf("Session [%s] is too old %d, when maximux lifetime is %d, trying to close",
+                            session.getRequestURI(), alive / 1000, wsConnectionMaxLifeTime);
+                    session.close(new CloseReason(CloseCodes.SERVICE_RESTART, "Connection max lifetime reached"));
+                    lifeTime.remove(session);
+                    connectionPruned++;
+                    // } catch (IOException e) {
+                    // LOGGER.debug(e);
+                    // throw e;
+                    // }
                 }
+            } else {
+                final ByteBuffer buf = ByteBuffer.allocate(Long.BYTES);
+                buf.putLong(alive);
+                session.getAsyncRemote().sendPing(buf);
             }
         }
         final String msg = String.format("Connections pruned: %d of %d, time spent: %d", connectionPruned,

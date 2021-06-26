@@ -3,6 +3,7 @@ package com.redhat.qws.client;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -14,8 +15,10 @@ import javax.websocket.ClientEndpoint;
 import javax.websocket.ContainerProvider;
 import javax.websocket.DeploymentException;
 import javax.websocket.OnClose;
+import javax.websocket.OnError;
 import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
+import javax.websocket.PongMessage;
 import javax.websocket.Session;
 import javax.websocket.WebSocketContainer;
 
@@ -39,6 +42,12 @@ public class SmartClientDeviceEmulator implements Runnable {
         void onOpen(Session session) {
             LOGGER.debugf("::onOpen(), time spent(ms): %s", (new Date()).getTime() - aliveTime.getTime());
             session.getAsyncRemote().sendObject(new Message(clientId, "hello"));
+        }
+
+        @OnError
+        void onError(Session session, Throwable t) {
+            LOGGER.debug("::onError()", t);
+            setRestart(true);
         }
 
         @OnClose
@@ -81,8 +90,8 @@ public class SmartClientDeviceEmulator implements Runnable {
         scheduler.scheduleWithFixedDelay(this, 10, 10, TimeUnit.SECONDS);
         aliveTime = null;
         this.wsConnectionMaxLifeTime = wsConnectionMaxLifeTime;
-        LOGGER.debugf("SmartClient id(%s), user(%s), URI(%s), connection MAX_LIFE_TIME(%s)", this.clientId, user, wsProxy,
-                wsConnectionMaxLifeTime);
+        LOGGER.debugf("SmartClient id(%s), user(%s), URI(%s), connection MAX_LIFE_TIME(%s)", this.clientId, user,
+                wsProxy, wsConnectionMaxLifeTime);
     }
 
     public SmartClientDeviceEmulator(@NotNull UserContext user, @NotBlank String wsProxyEndpoint,
@@ -95,6 +104,9 @@ public class SmartClientDeviceEmulator implements Runnable {
         WebSocketContainer container = ContainerProvider.getWebSocketContainer();
         session = container.connectToServer(new MessageStreamer(), wsProxy);
         setRestart(false);
+        session.addMessageHandler(PongMessage.class,
+                pong -> LOGGER.debugf("PONG received from server(%s): %s", session.getId(), pong.getApplicationData()));
+
     }
 
     public void stop() throws IOException {
@@ -123,7 +135,8 @@ public class SmartClientDeviceEmulator implements Runnable {
         final Date now = new Date();
         final long alive = now.getTime() - aliveTime.getTime();
         if (alive > (wsConnectionMaxLifeTime * 1000)) {
-            LOGGER.infof("It's time to restart session(%s), seconds of alive: %s", session.getRequestURI(), alive / 1000);
+            LOGGER.infof("It's time to restart session(%s), seconds of alive: %s", session.getRequestURI(),
+                    alive / 1000);
             try {
                 stop();
                 start();
@@ -134,6 +147,13 @@ public class SmartClientDeviceEmulator implements Runnable {
         }
         synchronized (restartLock) {
             if (restart == false) {
+                final ByteBuffer buf = ByteBuffer.allocate(Long.BYTES);
+                buf.putLong(alive);
+                try {
+                    session.getAsyncRemote().sendPing(buf);
+                } catch (Exception e) {
+                    setRestart(true);
+                }
                 return;
             }
             try {
