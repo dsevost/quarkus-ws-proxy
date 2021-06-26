@@ -133,9 +133,10 @@ public class InfinispanServerTestResource implements QuarkusTestResourceLifecycl
     }
 
     public void stop() {
-        if (server != null) {
-            server.stop();
-        }
+        // do not stop infinispan server instance to avoid hotrod client complaint on junit test shutdown
+        // if (server != null) {
+        //     server.stop();
+        // }
     }
 
     private static class HotRodServerProperties {
