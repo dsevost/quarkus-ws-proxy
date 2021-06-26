@@ -81,11 +81,13 @@ public class EventGenerator {
                 .newBuilder();
         messageBuilder.setBody(message.body).setDate(message.date.getTime()).setFrom(message.from);
         clientBuilder.setClientId(client.id).setUser(userBuilder.setName(client.user.name));
+        LOGGER.warnf("(%s) Sending message [%s] to [%s]", grpcWsp.getClass().getSimpleName(), message, client);
         grpcWsp.handleMessage(com.redhat.qws.model.grpc.MessageExchange.newBuilder().setClient(clientBuilder)
                 .setMessage(messageBuilder).build());
     }
 
     void restWspSend(SmartClientContext client, Message message) {
+        LOGGER.warnf("(%s) Sending message [%s] to [%s]", restWsp.getClass().getSimpleName(), message, client);
         restWsp.send(new MessageExchange(client, message));
     }
 

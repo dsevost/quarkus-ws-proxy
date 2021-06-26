@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import javax.json.bind.JsonbBuilder;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.websocket.ClientEndpoint;
@@ -34,7 +35,8 @@ public class SmartClientDeviceEmulator implements Runnable {
             if (message.contains("subscribed")) {
                 LOGGER.debugf("server message: for client(%s/%s) [%s]", clientId, user.name, message);
             } else {
-                LOGGER.infof("server message: for client(%s/%s) [%s]", clientId, user.name, message);
+                Message msg = JsonbBuilder.create().fromJson(message, Message.class);
+                LOGGER.warnf("Delivery time %sms - Message [%s] for client(%s/%s)", System.currentTimeMillis() - msg.date.getTime(), message, clientId, user.name);
             }
         }
 

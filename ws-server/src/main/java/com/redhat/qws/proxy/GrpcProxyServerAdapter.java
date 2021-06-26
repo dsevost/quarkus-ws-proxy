@@ -59,7 +59,7 @@ public class GrpcProxyServerAdapter extends WSProxyGrpc.WSProxyImplBase {
         } else {
             final Message message = new Message(request.getMessage().getFrom(),
                     new Date(request.getMessage().getDate()), request.getMessage().getBody());
-            LOGGER.debugf("Handling message [%s]", message);
+            LOGGER.warnf("(%s) Message [%s] received for [%s]:[%s]", getClass().getSimpleName(), message, clientId, user);
             if (datagridUsage) {
                 datagrid.storeAsync(user, clientId, message)
                         .thenAccept(reply -> LOGGER.debugf("Message [%s] stored to datagrid asynchronously", message));

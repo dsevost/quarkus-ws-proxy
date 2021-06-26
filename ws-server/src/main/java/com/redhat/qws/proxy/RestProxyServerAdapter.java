@@ -54,11 +54,12 @@ public class RestProxyServerAdapter {
         // LOGGER.infof("Received notification from SENDER: raw=[%s]", mx);
         // MessageExchange mmx = JsonbBuilder.create().fromJson(mx,
         // MessageExchange.class);
-        LOGGER.infof("Received notification from SENDER: mmx=[%s]", mmx);
+        // LOGGER.infof("Received notification from SENDER: mmx=[%s]", mmx);
+        LOGGER.warnf("(%s) Message [%s] received for [%s]", getClass().getSimpleName(), mmx.message, mmx.client.getSmartClientKey());
         if (datagridUsage) {
             datagrid.store(mmx.client.user.name, mmx.client.id, mmx.message);
         } else {
-            wsServer.send(mmx.client.getSmartCleintKey(), mmx.message);
+            wsServer.send(mmx.client.getSmartClientKey(), mmx.message);
         }
     }
 
