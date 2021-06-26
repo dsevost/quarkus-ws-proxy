@@ -48,8 +48,8 @@ public class RestProxyServerAdapter {
     
     @POST
     @Path("server/receiver")
-    @Counted("send_client_counter")
-    @Timed("send_client")
+    @Counted("quarkus_wsserver_handle_message_rest_counter")
+    @Timed("quarkus_wsserver_handle_message_rest")
     public void receive(@Valid MessageExchange mmx) {
         // LOGGER.infof("Received notification from SENDER: raw=[%s]", mx);
         // MessageExchange mmx = JsonbBuilder.create().fromJson(mx,

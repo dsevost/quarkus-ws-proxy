@@ -23,8 +23,8 @@ public class GrpcSmartClientManagerAdapter extends SmartClientGrpc.SmartClientIm
     MeterRegistry registry;
 
     @Override
-    @Counted("smartclient_subscribe_blocking_counter")
-    @Timed("smartclient_subscribe_blocking")
+    @Counted("quarkus_smartclient_subscribe_blocking_counter")
+    @Timed("quarkus_smartclient_subscribe_blocking")
     public void subscribe(com.redhat.qws.sender.grpc.SmartClientContextWithIP request,
             StreamObserver<Respond> observer) {
 
@@ -35,8 +35,8 @@ public class GrpcSmartClientManagerAdapter extends SmartClientGrpc.SmartClientIm
     }
 
     @Override
-    @Counted("smartclient_unsubscribe_blocking_counter")
-    @Timed("smartclient_unsubscribe_blocking")
+    @Counted("quarkus_smartclient_unsubscribe_blocking_counter")
+    @Timed("quarkus_smartclient_unsubscribe_blocking")
     public void unsubscribe(com.redhat.qws.sender.grpc.SmartClientContextWithIP request,
             StreamObserver<Respond> observer) {
                 Respond respond = GrpcSmartClientManagerHelper.subscription(request, store, false, Message.from(this),

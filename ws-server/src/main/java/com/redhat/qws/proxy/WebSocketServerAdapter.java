@@ -123,6 +123,8 @@ public class WebSocketServerAdapter {
     }
 
     @OnOpen
+    @Counted("quarkus_wsserver_client_connect_counter")
+    @Timed("quarkus_wsserver_client_connect")
     public void clientConnect(Session session, @PathParam("user") String user, @PathParam("cid") String cid) {
         LOGGER.infof("Connect: smartClient id [%s], user [%s]", cid, user);
         final String message = "Backend not available, try again later";
@@ -177,8 +179,8 @@ public class WebSocketServerAdapter {
     }
 
     @OnClose
-    @Counted("client_disconnect_counter")
-    @Timed("client_disconnect")
+    @Counted("quarkus_wsserver_client_disconnect_counter")
+    @Timed("quarkus_wsserver_client_disconnect")
     public void clientDisconnect(Session session, @PathParam("user") String user, @PathParam("cid") String cid) {
         LOGGER.infof("Disconnect: smartClient id [%s], user [%s]", cid, user);
         if (isPeerEndpointUnreachable()) {
@@ -211,7 +213,7 @@ public class WebSocketServerAdapter {
     }
 
     @OnError
-    @Counted("websocket_errors_counter")
+    @Counted("quarkus_wsserver_on_error_counter")
     public void onError(Session session, @PathParam("user") String user, @PathParam("cid") String cid, Throwable t) {
         LOGGER.warnf("Connection error: [%s] - smartClient id [%s], user [%s], close connection", t.getMessage(), cid,
                 user);
@@ -253,8 +255,6 @@ public class WebSocketServerAdapter {
         }
     }
 
-    @Counted("smartclient_connect_counter")
-    @Timed("smartclient_connect")
     String restSubscribe(String user, String cid) {
         return restScs.subscribe(user, cid, getRuntimeIP());
     }
@@ -283,8 +283,6 @@ public class WebSocketServerAdapter {
         }
     }
 
-    @Counted("smartclient_disconnect_counter")
-    @Timed("smartclient_disconnect")
     String restUnsubscribe(String user, String cid) {
         return restScs.unsubscribe(user, cid, getRuntimeIP());
     }
@@ -299,7 +297,7 @@ public class WebSocketServerAdapter {
         final long connectionsTotal = sessions.size();
         for (Session session : sessions.values()) {
             final Date opened = lifeTime.get(session);
-            final long alive = (new Date()).getTime() - randomizator(opened);
+            final long alive = (new Date()).getTime() - opened.getTime();
             if (alive > maxTime) {
                 if (session.isOpen()) {
                     try {
@@ -321,17 +319,6 @@ public class WebSocketServerAdapter {
         } else {
             LOGGER.info(msg);
         }
-    }
-
-    long randomizator(Date time) {
-        return time.getTime();
-        // final int randomizator = (int) (wsConnectionMaxLifeTime / 3);
-        // final long drift = random.nextInt((int) randomizator);
-        // if (drift < randomizator) {
-        // return time.getTime() - drift;
-        // } else {
-        // return time.getTime() + drift;
-        // }
     }
 
     synchronized String getRuntimeIP() {

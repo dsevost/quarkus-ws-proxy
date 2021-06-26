@@ -25,16 +25,16 @@ public class MutinyGrpcSmartClientManagerAdapter extends MutinySmartClientGrpc.S
     MeterRegistry registry;
 
     @Override
-    @Counted("smartclient_subscribe_mutiny_counter")
-    @Timed("smartclient_subscribe_mutiny")
+    @Counted("quarkus_smartclient_subscribe_mutiny_counter")
+    @Timed("quarkus_smartclient_subscribe_mutiny")
     public Uni<Respond> subscribe(SmartClientContextWithIP request) {
         return Uni.createFrom().item(() -> GrpcSmartClientManagerHelper.subscription(request, store, true,
                 Message.from(this), GrpcSmartClientManagerHelper.MUTINY));
     }
 
     @Override
-    @Counted("smartclient_unsubscribe_mutiny_counter")
-    @Timed("smartclient_unsubscribe_mutiny")
+    @Counted("quarkus_smartclient_unsubscribe_mutiny_counter")
+    @Timed("quarkus_smartclient_unsubscribe_mutiny")
     public Uni<Respond> unsubscribe(SmartClientContextWithIP request) {
         return Uni.createFrom().item(() -> GrpcSmartClientManagerHelper.subscription(request, store, false,
                 Message.from(this), GrpcSmartClientManagerHelper.MUTINY));

@@ -47,8 +47,8 @@ public class GrpcProxyServerAdapter extends WSProxyGrpc.WSProxyImplBase {
     }
 
     @Override
-    @Counted("send_client_counter")
-    @Timed("send_client")
+    @Counted("quarkus_wsserver_handle_message_blocking_counter")
+    @Timed("quarkus_wsserver_handle_message_blocking")
     public void handleMessage(MessageExchange request, StreamObserver<Respond> responseObserver) {
         final String clientId = request.getClient().getClientId();
         final String user = request.getClient().getUser().getName();

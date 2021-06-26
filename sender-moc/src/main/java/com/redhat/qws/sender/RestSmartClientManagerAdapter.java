@@ -38,8 +38,8 @@ public class RestSmartClientManagerAdapter {
 
     @GET
     @Path("subscribe")
-    @Counted("rest_subscribe_counter")
-    @Timed("rest_subscribe")
+    @Counted("quarkus_smartclient_subscribe_rest_counter")
+    @Timed("quarkus_smartclient_subscribe_rest")
     public Response subscribe(@QueryParam(PRAMETER_NAME_USER) String user,
             @QueryParam(PRAMETER_NAME_CLIENT_ID) String cid, @QueryParam(PRAMETER_NAME_LEGACY_IP) String ip) {
         LOGGER.debugf("Got REST requset to subscribe client with parameters: client[%s/%s], IP [%s]", user, cid, ip);
@@ -57,8 +57,8 @@ public class RestSmartClientManagerAdapter {
 
     @GET
     @Path("unsubscribe")
-    @Counted("rest_unsubscribe_counter")
-    @Timed("rest_unsubscribe")
+    @Counted("quarkus_smartclient_unsubscribe_rest_counter")
+    @Timed("quarkus_smartclient_unsubscribe_rest")
     public Response unsubscribe(@QueryParam(PRAMETER_NAME_USER) String user,
             @QueryParam(PRAMETER_NAME_CLIENT_ID) String cid, @QueryParam(PRAMETER_NAME_LEGACY_IP) String ip) {
         LOGGER.debugf("Got REST requset to unsubscribe client with parameters: client[%s/%s], IP [%s]", user, cid, ip);
