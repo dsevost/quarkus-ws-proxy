@@ -8,6 +8,7 @@ ENV \
 ENV \
     TRUST_STORE="-Djavax.net.ssl.trustStore=$TRUST_STORE_PATH -Djavax.net.ssl.trustStorePassword=$TRUST_STORE_PASSWD"
 
+# -Xss2m 
 ENV \
     JAVA_OPTIONS="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager $TRUST_STORE"
 
