@@ -5,7 +5,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.Date;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -66,7 +65,7 @@ public class SmartClientDeviceEmulator implements Runnable {
         }
     }
 
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService scheduler;
 
     private final long wsConnectionMaxLifeTime;
 
@@ -81,15 +80,16 @@ public class SmartClientDeviceEmulator implements Runnable {
     private Date aliveTime;
 
     SmartClientDeviceEmulator(@NotBlank String clientId, @NotNull UserContext user, @NotBlank String wsProxyEndpoint,
-            long wsConnectionMaxLifeTime) throws URISyntaxException {
+            long wsConnectionMaxLifeTime, ScheduledExecutorService scheduler) throws URISyntaxException {
         if (clientId == null) {
             this.clientId = "Client-" + Long.toHexString(this.hashCode());
         } else {
             this.clientId = clientId;
         }
         this.user = user;
+        this.scheduler = scheduler;
         wsProxy = new URI(wsProxyEndpoint + "/stream/" + this.user.name + "/" + this.clientId);
-        scheduler.scheduleWithFixedDelay(this, 10, 10, TimeUnit.SECONDS);
+        this.scheduler.scheduleWithFixedDelay(this, 10, 10, TimeUnit.SECONDS);
         aliveTime = null;
         this.wsConnectionMaxLifeTime = wsConnectionMaxLifeTime;
         LOGGER.debugf("SmartClient id(%s), user(%s), URI(%s), connection MAX_LIFE_TIME(%s)", this.clientId, user,
@@ -97,8 +97,8 @@ public class SmartClientDeviceEmulator implements Runnable {
     }
 
     public SmartClientDeviceEmulator(@NotNull UserContext user, @NotBlank String wsProxyEndpoint,
-            long wsConnectionMaxLifeTime) throws URISyntaxException {
-        this(null, user, wsProxyEndpoint, wsConnectionMaxLifeTime);
+            long wsConnectionMaxLifeTime, ScheduledExecutorService scheduler) throws URISyntaxException {
+        this(null, user, wsProxyEndpoint, wsConnectionMaxLifeTime, scheduler);
     }
 
     public void start() throws DeploymentException, IOException {
