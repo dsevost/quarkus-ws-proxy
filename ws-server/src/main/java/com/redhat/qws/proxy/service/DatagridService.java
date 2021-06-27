@@ -18,8 +18,6 @@ import org.infinispan.client.hotrod.annotation.ClientListener;
 import org.infinispan.client.hotrod.event.ClientCacheEntryCreatedEvent;
 import org.infinispan.client.hotrod.event.ClientCacheEntryModifiedEvent;
 import org.infinispan.client.hotrod.event.ClientCacheEntryRemovedEvent;
-import org.infinispan.commons.configuration.BaseConfigurationInfo;
-import org.infinispan.commons.configuration.BasicConfiguration;
 import org.infinispan.commons.dataconversion.MediaType;
 import org.jboss.logging.Logger;
 
@@ -77,24 +75,9 @@ public class DatagridService {
             return;
         }
         if (cache == null) {
-            // avoid to having in pom.xml
-            // <dependency>
-            // <groupId>org.infinispan</groupId>
-            // <artifactId>infinispan-core</artifactId>
-            // <scope>runtime</scope>
-            // </dependency>
             org.infinispan.configuration.cache.ConfigurationBuilder cb = new org.infinispan.configuration.cache.ConfigurationBuilder();
             cb.encoding().mediaType(MediaType.APPLICATION_PROTOSTREAM_TYPE).build();
             cache = rcm.administration().getOrCreateCache(cacheName, cb.build());
-            // final BasicConfiguration bc = new BasicConfiguration() {
-            // @Override
-            // public String toXMLString(String name) {
-            // return "<distributed-cache name=\"" + name + "\">"
-            // + "<encoding media-type=\"application/x-protostream\"/>" +
-            // "</distributed-cache>";
-            // }
-            // };
-            // cache = rcm.administration().getOrCreateCache(cacheName, bc);
         }
         if (debugListener) {
             cache.addClientListener(new EventPrintListener());

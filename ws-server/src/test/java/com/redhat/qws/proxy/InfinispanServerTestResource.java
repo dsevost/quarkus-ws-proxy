@@ -102,9 +102,6 @@ public class InfinispanServerTestResource implements QuarkusTestResourceLifecycl
                     }
                 });
         final DefaultCacheManager cm = new DefaultCacheManager(gcb.build());
-        // cm.administration().withFlags(CacheContainerAdmin.AdminFlag.VOLATILE).getOrCreateCache(cacheName,
-        // new
-        // ConfigurationBuilder().encoding().mediaType("application/x-protostream").build());
         cm.administration().withFlags(CacheContainerAdmin.AdminFlag.VOLATILE).getOrCreateCache(
                 ProtobufMetadataManagerConstants.PROTOBUF_METADATA_CACHE_NAME, new ConfigurationBuilder().build());
 
