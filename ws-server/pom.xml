@@ -88,27 +88,22 @@
       <artifactId>quarkus-infinispan-client</artifactId>
     </dependency>
     <!-- additional -->
-    <!-- <dependency>
-      <groupId>org.infinispan</groupId>
-      <artifactId>infinispan-server-runtime</artifactId>
-      <version>${infinispan.version}</version>
-      <scope>test</scope>
-    </dependency> -->
     <dependency>
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-core</artifactId>
-      <scope>test</scope>
+      <!-- neded at test and compile time -->
+      <!-- <scope>test</scope> -->
+    </dependency>
+    <dependency>
+      <groupId>org.infinispan.protostream</groupId>
+      <artifactId>protostream-processor</artifactId>
+      <!-- neded at test and compile time -->
+      <!-- <scope>provided</scope> -->
     </dependency>
     <dependency>
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-server-hotrod</artifactId>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.infinispan.protostream</groupId>
-      <artifactId>protostream-processor</artifactId>
-      <!-- nedde at test and compile time -->
-      <!-- <scope>provided</scope> -->
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>

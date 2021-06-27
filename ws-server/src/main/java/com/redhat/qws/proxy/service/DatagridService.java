@@ -9,7 +9,6 @@ import javax.inject.Inject;
 import com.redhat.qws.proxy.model.Message;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.infinispan.client.hotrod.DefaultTemplate;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.annotation.ClientCacheEntryCreated;
@@ -19,6 +18,9 @@ import org.infinispan.client.hotrod.annotation.ClientListener;
 import org.infinispan.client.hotrod.event.ClientCacheEntryCreatedEvent;
 import org.infinispan.client.hotrod.event.ClientCacheEntryModifiedEvent;
 import org.infinispan.client.hotrod.event.ClientCacheEntryRemovedEvent;
+import org.infinispan.commons.configuration.BaseConfigurationInfo;
+import org.infinispan.commons.configuration.BasicConfiguration;
+import org.infinispan.commons.dataconversion.MediaType;
 import org.jboss.logging.Logger;
 
 import io.quarkus.runtime.StartupEvent;
@@ -58,6 +60,7 @@ public class DatagridService {
     public CompletableFuture<CachedMessage> removeAsync(String key) {
         LOGGER.debugf("Removing message(key=[%s]) from datagrid", key);
         return getCache().removeAsync(key);
+        // return null;
     }
 
     public void register(Object listener) {
@@ -73,9 +76,25 @@ public class DatagridService {
             LOGGER.infof("Datagrid will not be used, to use it set property '%s' to true", "datagrid.use");
             return;
         }
-        cache = getCache();
         if (cache == null) {
-            cache = rcm.administration().createCache(cacheName, DefaultTemplate.DIST_SYNC);
+            // avoid to having in pom.xml
+            // <dependency>
+            // <groupId>org.infinispan</groupId>
+            // <artifactId>infinispan-core</artifactId>
+            // <scope>runtime</scope>
+            // </dependency>
+            org.infinispan.configuration.cache.ConfigurationBuilder cb = new org.infinispan.configuration.cache.ConfigurationBuilder();
+            cb.encoding().mediaType(MediaType.APPLICATION_PROTOSTREAM_TYPE).build();
+            cache = rcm.administration().getOrCreateCache(cacheName, cb.build());
+            // final BasicConfiguration bc = new BasicConfiguration() {
+            // @Override
+            // public String toXMLString(String name) {
+            // return "<distributed-cache name=\"" + name + "\">"
+            // + "<encoding media-type=\"application/x-protostream\"/>" +
+            // "</distributed-cache>";
+            // }
+            // };
+            // cache = rcm.administration().getOrCreateCache(cacheName, bc);
         }
         if (debugListener) {
             cache.addClientListener(new EventPrintListener());

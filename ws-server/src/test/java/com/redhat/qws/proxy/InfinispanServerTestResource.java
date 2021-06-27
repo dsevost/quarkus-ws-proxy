@@ -13,7 +13,11 @@ import javax.validation.constraints.NotNull;
 import org.infinispan.commons.api.CacheContainerAdmin;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.infinispan.configuration.global.GlobalConfigurationBuilder;
+import org.infinispan.globalstate.ConfigurationStorage;
+import org.infinispan.globalstate.impl.VolatileLocalConfigurationStorage;
 import org.infinispan.manager.DefaultCacheManager;
+import org.infinispan.query.remote.client.ProtobufMetadataManagerConstants;
+import org.infinispan.server.core.admin.embeddedserver.EmbeddedServerAdminOperationHandler;
 import org.infinispan.server.core.security.simple.SimpleServerAuthenticationProvider;
 import org.infinispan.server.hotrod.HotRodServer;
 import org.infinispan.server.hotrod.configuration.HotRodServerConfigurationBuilder;
@@ -88,27 +92,32 @@ public class InfinispanServerTestResource implements QuarkusTestResourceLifecycl
         loadProperties();
 
         // DefaultCacheManager cm = new DefaultCacheManager("infinispan.xml");
-        GlobalConfigurationBuilder gcb = new GlobalConfigurationBuilder();
+        final GlobalConfigurationBuilder gcb = new GlobalConfigurationBuilder();
         gcb.nonClusteredDefault();
-        DefaultCacheManager cm = new DefaultCacheManager(gcb.build());
-        cm.administration().withFlags(CacheContainerAdmin.AdminFlag.VOLATILE).getOrCreateCache(cacheName,
-                new ConfigurationBuilder().encoding().mediaType("application/x-protostream").build());
-        cm.administration().withFlags(CacheContainerAdmin.AdminFlag.VOLATILE).getOrCreateCache("___protobuf_metadata",
-                new ConfigurationBuilder().build());
+        gcb.globalState().enable().persistentLocation("infinispan-persistence", "target")
+                .configurationStorage(ConfigurationStorage.CUSTOM)
+                .configurationStorageSupplier(() -> new VolatileLocalConfigurationStorage() {
+                    @Override
+                    public void validateFlags(java.util.EnumSet<CacheContainerAdmin.AdminFlag> flags) {
+                    }
+                });
+        final DefaultCacheManager cm = new DefaultCacheManager(gcb.build());
+        // cm.administration().withFlags(CacheContainerAdmin.AdminFlag.VOLATILE).getOrCreateCache(cacheName,
+        // new
+        // ConfigurationBuilder().encoding().mediaType("application/x-protostream").build());
+        cm.administration().withFlags(CacheContainerAdmin.AdminFlag.VOLATILE).getOrCreateCache(
+                ProtobufMetadataManagerConstants.PROTOBUF_METADATA_CACHE_NAME, new ConfigurationBuilder().build());
 
-        HotRodServerConfigurationBuilder hrb = new HotRodServerConfigurationBuilder();
+        final HotRodServerConfigurationBuilder hrb = new HotRodServerConfigurationBuilder();
 
         hrb.port(Integer.valueOf(HotRodServerProperties.HOTROD_SERVER_PORT.getValue()));
 
-        // ConfigurationBuilderHolder cbh = new
-        // ConfigurationBuilderHolder(getClass().getClassLoader(), gcb);
-        // hrb.adminOperationsHandler(new ServerAdminOperationsHandler(cbh));
+        hrb.adminOperationsHandler(new EmbeddedServerAdminOperationHandler());
         hrb.authentication().enable();
-        SimpleServerAuthenticationProvider ssap = new SimpleServerAuthenticationProvider();
+        final SimpleServerAuthenticationProvider ssap = new SimpleServerAuthenticationProvider();
         ssap.addUser(userName, authRealm, userPassword.toCharArray());
         hrb.authentication().addAllowedMech(saslMech).serverAuthenticationProvider(ssap).serverName("localhost")
                 .securityRealm(authRealm);
-        // hrb.authentication().disable();
 
         hrb.ssl().enable().keyStoreFileName(keyStoreFileName).keyStorePassword(keyStorePassword.toCharArray())
                 .keyAlias("datagrid").keyStoreCertificatePassword(keyStorePassword.toCharArray());
@@ -133,9 +142,10 @@ public class InfinispanServerTestResource implements QuarkusTestResourceLifecycl
     }
 
     public void stop() {
-        // do not stop infinispan server instance to avoid hotrod client complaint on junit test shutdown
+        // do not stop infinispan server instance to avoid hotrod client complaint on
+        // junit test shutdown
         // if (server != null) {
-        //     server.stop();
+        // server.stop();
         // }
     }
 

@@ -1,6 +1,7 @@
 **/*.cmd
 **/.mvn/
 **/infinispan-server*/**
+**/org.infinispan.*.dat
 **/mvnw*
 **/target/
 infinispan-integration-server
