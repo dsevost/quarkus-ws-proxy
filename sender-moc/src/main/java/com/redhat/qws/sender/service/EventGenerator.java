@@ -9,7 +9,6 @@ import com.redhat.qws.sender.model.MessageExchange;
 import com.redhat.qws.sender.model.SmartClientContext;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -25,8 +24,7 @@ public class EventGenerator {
     MessageStore store;
 
     @Inject
-    @RestClient
-    RestWSProxyService restWsp;
+    RestWSProxyServicClientFactory restWspsclf;
 
     @Inject
     @GrpcService("ws-proxy")
@@ -62,14 +60,14 @@ public class EventGenerator {
                     if (rpcProtocol.equalsIgnoreCase("GRPC")) {
                         grpcWspSend(context, message);
                     } else {
-                        restWspSend(context, message);
+                        restWspSend(context, message, ip);
                     }
                 });
             }
         } catch (Exception e) {
             setPeerEndpointUnreachable();
-            LOGGER.warnf("WSProxyService unreachable: [%s]/[%s]", e, e.getCause().getMessage());
-            LOGGER.debugf(e, "WSProxyService Endpoint [%s] unreachable", grpcWsp);
+            LOGGER.debug("WSProxyService unreachable", e);
+            throw e;
         }
     }
 
@@ -86,7 +84,8 @@ public class EventGenerator {
                 .setMessage(messageBuilder).build());
     }
 
-    void restWspSend(SmartClientContext client, Message message) {
+    void restWspSend(SmartClientContext client, Message message, String ip) {
+        final RestWSProxyService restWsp = restWspsclf.getRestWSProxyService(ip);
         LOGGER.warnf("(%s) Sending message [%s] to [%s]", restWsp.getClass().getSimpleName(), message, client);
         restWsp.send(new MessageExchange(client, message));
     }

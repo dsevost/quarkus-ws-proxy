@@ -9,9 +9,9 @@ import javax.ws.rs.core.MediaType;
 
 import com.redhat.qws.sender.model.MessageExchange;
 
-import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
+// import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
-@RegisterRestClient(configKey="ws-proxy")
+// @RegisterRestClient(configKey="ws-proxy")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 @Path("proxy")

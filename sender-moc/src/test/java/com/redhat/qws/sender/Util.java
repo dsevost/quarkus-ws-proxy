@@ -19,7 +19,7 @@ public class Util {
 
     static final String DEFAULT_USER_NAME = "user1";
     static final String DEFAULT_CLIENT_ID = "cid-1234567890";
-    static final String DEFAULT_LEGACY_IP = "1.2.3.4";
+    static final String DEFAULT_LEGACY_IP = "127.0.0.1";
 
     static final String DEFAULT_MESSAGE = "message ";
 
