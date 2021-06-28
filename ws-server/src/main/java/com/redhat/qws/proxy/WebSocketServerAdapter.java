@@ -171,18 +171,17 @@ public class WebSocketServerAdapter {
                 send(session, Message.from(this, message + ", reason: " + failure.getMessage()));
             });
         } else {
-            try {
-                String msg = restSubscribe(user, cid);
-                if (msg == null || msg.equals("")) {
+            restScs.subscribe(user, cid, getRuntimeIP()).subscribe().with(reply -> {
+                if (reply == null || reply.equals("")) {
                     send(session, Message.from(this, "You've already been registered"));
                 } else {
-                    send(session, JsonbBuilder.create().fromJson(msg, Message.class));
+                    send(session, JsonbBuilder.create().fromJson(reply, Message.class));
                 }
-            } catch (Exception e) {
+            }, failure -> {
                 setPeerEndpointUnreachable();
-                LOGGER.debug("SmartClientRestService error", e);
-                send(session, Message.from(this, message + ", reason: " + e.getMessage()));
-            }
+                LOGGER.debug("SmartClientRestService error", failure);
+                send(session, Message.from(this, message + ", reason: " + failure.getMessage()));
+            });
         }
         session.addMessageHandler(PongMessage.class,
                 pong -> LOGGER.debugf("PONG received from client(%s): %s", session.getId(), pong.getApplicationData()));
@@ -214,21 +213,21 @@ public class WebSocketServerAdapter {
         final String key = SmartClientContext.getSmartClientKey(user, cid);
         sessions.remove(key);
         lifeTime.remove(session);
-        if (rpcProtocol.equalsIgnoreCase("grpc")) {
+        if (rpcProtocol.equalsIgnoreCase("gRPC")) {
             grpcScs.grpcMutinyUnsubscribe(user, cid, getRuntimeIP()).subscribe().with((reply) -> {
                 if (reply.getHttpReturnCode() == Response.Status.OK.getStatusCode()) {
                     LOGGER.debugf("MESSAGE: %s", reply.getMessage());
                 } else {
-                    LOGGER.debugf("Subscription not foud for [%s] ", new SmartClientContext(user, cid));
+                    LOGGER.infof("Subscription not foud for [%s] ", new SmartClientContext(user, cid));
                 }
             });
         } else {
-            try {
-                send(session, Message.from(this, restUnsubscribe(user, cid)));
-            } catch (Exception e) {
+            restScs.unsubscribe(user, cid, getRuntimeIP()).subscribe().with(reply -> {
+                LOGGER.debugf("REST unsubscribe: %s", reply);
+            }, failure -> {
                 setPeerEndpointUnreachable();
-                LOGGER.debug("SmartClientRestService error", e);
-            }
+                LOGGER.warnf("SmartClientRestService error", failure);
+            });
         }
     }
 
@@ -249,24 +248,29 @@ public class WebSocketServerAdapter {
         try {
             synchronized (session) {
                 if (isPeerEndpointUnreachable()) {
-                    final String message = "Backend not available, try again later";
-                    session.close(new CloseReason(CloseCodes.TRY_AGAIN_LATER, message));
+                    session.close(
+                            new CloseReason(CloseCodes.TRY_AGAIN_LATER, "Backend not available, try again later"));
                 } else {
                     session.close(new CloseReason(CloseCodes.UNEXPECTED_CONDITION, t.getMessage()));
                 }
             }
-            if (rpcProtocol.equalsIgnoreCase("REST")) {
-                LOGGER.warnf("REST unsubscribe: %d", restUnsubscribe(user, cid));
-            } else {
-                grpcScs.grpcMutinyUnsubscribe(user, cid, getRuntimeIP()).subscribe().with(reply -> {
-                    LOGGER.debugf("GrpcMutiny unsubscribe: %s", reply);
-                }, failure -> {
-                    setPeerEndpointUnreachable();
-                    LOGGER.warn("SmartClientGrpcServiceStub error", failure);
-                });
-            }
         } catch (IOException e) {
-            LOGGER.debugf(e, "::onError(%s)", session.getId());
+            LOGGER.debugf(e, "Error while closing session [%s]", session.getRequestURI());
+        }
+        if (rpcProtocol.equalsIgnoreCase("gRPC")) {
+            grpcScs.grpcMutinyUnsubscribe(user, cid, getRuntimeIP()).subscribe().with(reply -> {
+                LOGGER.debugf("GrpcMutiny unsubscribe: %s", reply);
+            }, failure -> {
+                setPeerEndpointUnreachable();
+                LOGGER.warn("SmartClientGrpcServiceStub error", failure);
+            });
+        } else {
+            restScs.unsubscribe(user, cid, getRuntimeIP()).subscribe().with(reply -> {
+                LOGGER.warnf("REST unsubscribe: %s", reply);
+            }, failure -> {
+                setPeerEndpointUnreachable();
+                LOGGER.warnf("SmartClientRestService error", failure);
+            });
         }
     }
 
@@ -301,14 +305,6 @@ public class WebSocketServerAdapter {
                 }
             });
         }
-    }
-
-    String restSubscribe(String user, String cid) {
-        return restScs.subscribe(user, cid, getRuntimeIP());
-    }
-
-    String restUnsubscribe(String user, String cid) {
-        return restScs.unsubscribe(user, cid, getRuntimeIP());
     }
 
     @Scheduled(every = "{scheduler.every}")

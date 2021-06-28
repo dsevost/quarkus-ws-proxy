@@ -9,6 +9,8 @@ import javax.ws.rs.core.MediaType;
 
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
+import io.smallrye.mutiny.Uni;
+
 @Path("rest")
 @RegisterRestClient(configKey="smarctlient-api")
 @Consumes(MediaType.APPLICATION_JSON)
@@ -16,9 +18,9 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 public interface SmartClientRestService {
     @GET
     @Path("subscribe")
-    String subscribe(@QueryParam(SCMParams.PRAMETER_NAME_USER) String user, @QueryParam(SCMParams.PRAMETER_NAME_CLIENT_ID) String cid, @QueryParam(SCMParams.PRAMETER_NAME_LEGACY_IP) String ip) ;
+    Uni<String> subscribe(@QueryParam(SCMParams.PRAMETER_NAME_USER) String user, @QueryParam(SCMParams.PRAMETER_NAME_CLIENT_ID) String cid, @QueryParam(SCMParams.PRAMETER_NAME_LEGACY_IP) String ip) ;
 
     @GET
     @Path("unsubscribe")
-    String unsubscribe(@QueryParam(SCMParams.PRAMETER_NAME_USER) String user, @QueryParam(SCMParams.PRAMETER_NAME_CLIENT_ID) String cid, @QueryParam(SCMParams.PRAMETER_NAME_LEGACY_IP) String ip) ;
+    Uni<String> unsubscribe(@QueryParam(SCMParams.PRAMETER_NAME_USER) String user, @QueryParam(SCMParams.PRAMETER_NAME_CLIENT_ID) String cid, @QueryParam(SCMParams.PRAMETER_NAME_LEGACY_IP) String ip) ;
 }

@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
-<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.redhat.qws</groupId>
   <artifactId>ws-server</artifactId>
@@ -32,7 +33,6 @@
         <artifactId>infinispan-bom</artifactId>
         <version>${infinispan.version}</version>
         <type>pom</type>
-        <!-- <scope>import</scope> -->
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -87,18 +87,13 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-infinispan-client</artifactId>
     </dependency>
-    <!-- additional -->
     <dependency>
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-core</artifactId>
-      <!-- neded at test and compile time -->
-      <!-- <scope>test</scope> -->
     </dependency>
     <dependency>
       <groupId>org.infinispan.protostream</groupId>
       <artifactId>protostream-processor</artifactId>
-      <!-- neded at test and compile time -->
-      <!-- <scope>provided</scope> -->
     </dependency>
     <dependency>
       <groupId>org.infinispan</groupId>
@@ -110,6 +105,10 @@
       <artifactId>junit-jupiter</artifactId>
       <version>1.15.1</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-resteasy-mutiny</artifactId>
     </dependency>
   </dependencies>
   <build>
