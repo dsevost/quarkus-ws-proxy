@@ -22,8 +22,8 @@ import io.grpc.stub.StreamObserver;
 import io.quarkus.grpc.runtime.annotations.GrpcService;
 
 @Singleton
-public class GrpcSmartClientManagerResourceStub extends com.redhat.qws.sender.grpc.SmartClientGrpc.SmartClientImplBase {
-    private static final Logger LOGGER = Logger.getLogger(GrpcSmartClientManagerResourceStub.class);
+public class TestGrpcSmartClientManagerResourceStub extends com.redhat.qws.sender.grpc.SmartClientGrpc.SmartClientImplBase {
+    private static final Logger LOGGER = Logger.getLogger(TestGrpcSmartClientManagerResourceStub.class);
 
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 

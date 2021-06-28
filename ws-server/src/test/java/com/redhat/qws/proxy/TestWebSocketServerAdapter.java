@@ -16,11 +16,7 @@ import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
 
-import com.google.inject.Inject;
-import com.redhat.qws.sender.GrpcSmartClientManagerResourceStub;
-
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
@@ -33,9 +29,9 @@ import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 @TestMethodOrder(OrderAnnotation.class)
-@QuarkusTestResource(InfinispanServerTestResource.class)
-public class WebSocketServerAdapterTest {
-    private static final Logger LOGGER = Logger.getLogger(WebSocketServerAdapterTest.class);
+@QuarkusTestResource(TestInfinispanServer.class)
+public class TestWebSocketServerAdapter {
+    private static final Logger LOGGER = Logger.getLogger(TestWebSocketServerAdapter.class);
     private static final LinkedBlockingDeque<String> MESSAGES = new LinkedBlockingDeque<>();
 
     @ClientEndpoint
@@ -43,7 +39,7 @@ public class WebSocketServerAdapterTest {
         @OnOpen
         public void open(Session session) {
             MESSAGES.add("CONNECT");
-            session.getAsyncRemote().sendText("!!! READY !!!");
+            session.getAsyncRemote().sendText("!!! CLIENT READY !!!");
         }
 
         @OnClose
@@ -53,13 +49,10 @@ public class WebSocketServerAdapterTest {
 
         @OnMessage
         void message(String msg) {
-            LOGGER.debugf("Client.class::onMessage(%s)", msg);
+            LOGGER.debugf("Client.class(h=%s)::onMessage(%s)", this.hashCode(), msg);
             MESSAGES.add(msg);
         }
     }
-
-    @Inject
-    RemoteCacheManager rcm;
 
     private static Session session;
 
@@ -87,11 +80,10 @@ public class WebSocketServerAdapterTest {
     public void testClientConnect() {
         try {
             session = ContainerProvider.getWebSocketContainer().connectToServer(Client.class, uri);
-            waitFor(1000);
             String response = poll(10);
             LOGGER.infof("::testClientConnect() RESPONSE_CONNECT: %s ", response);
             assertEquals(response, "CONNECT");
-            session.getAsyncRemote().sendText("!!! TEXT !!!");
+            session.getAsyncRemote().sendText("!!! HELLO CLIENT - testClientConnect !!!");
             response = poll(10);
             LOGGER.infof("::testClientConnect() RESPONSE_subscribed: %s", response);
             assertRespond(response, "subscribed");
@@ -109,6 +101,7 @@ public class WebSocketServerAdapterTest {
             s = ContainerProvider.getWebSocketContainer().connectToServer(Client.class, alreadyUri);
             String response = poll(10);
             LOGGER.infof("::testAlreadyConnected() RESPONSE_CONNECT: %s ", response);
+            session.getAsyncRemote().sendText("!!! HELLO CLIENT - testAlreadyConnected !!!");
             assertEquals(response, "CONNECT");
             response = poll(10);
             LOGGER.infof("::testAlreadyConnected() RESPONSE_already: %s", response);
@@ -121,7 +114,6 @@ public class WebSocketServerAdapterTest {
                 String response = poll(1);
                 LOGGER.infof("::testAlreadyConnected() RESPONSE_DISONNECT: %s", response);
                 assertEquals(response, "DISCONNECT");
-                waitFor(1000);
             }
         }
     }
@@ -150,7 +142,6 @@ public class WebSocketServerAdapterTest {
             // never happen
             // response = poll(10);
             // assertSubscriubtion(response, "subscribed");
-            waitFor(1);
         } catch (Exception e) {
             LOGGER.info(e);
             session = null;
@@ -159,9 +150,10 @@ public class WebSocketServerAdapterTest {
 
     @Test
     @Order(40)
-    public void testDropConnect() {
+    public void testDropConnect() throws IOException, InterruptedException {
+        Session s = null;
         try {
-            session = ContainerProvider.getWebSocketContainer().connectToServer(Client.class, uri);
+            s = ContainerProvider.getWebSocketContainer().connectToServer(Client.class, uri);
             String response = poll(10);
             LOGGER.infof("::testDropConnect() RESPONSE_CONNECT: %s ", response);
             assertEquals(response, "CONNECT");
@@ -173,35 +165,27 @@ public class WebSocketServerAdapterTest {
                 LOGGER.infof("::testDropConnect() RESPONSE_DISONNECT: %s", response);
             } while (response.contains("message -000-"));
             assertEquals(response, "DISCONNECT");
-            // give some time to propogate unsubscribe event
-            waitFor(1000);
         } catch (Exception e) {
             LOGGER.info(e);
-            session = null;
+        } finally {
+            if (s != null && s.isOpen()) {
+                s.close();
+                String response = poll(1);
+                LOGGER.infof("::testDropConnect() RESPONSE_DISONNECT: %s", response);
+                assertEquals(response, "DISCONNECT");
+            }
+            Thread.sleep(200);
         }
+
     }
 
     String poll(int waitSeconds) throws InterruptedException {
         final String msg = MESSAGES.poll(waitSeconds, TimeUnit.SECONDS);
-        // LOGGER.infof("Server pooled: %s", msg);
         return msg;
     }
 
     private static void assertRespond(String response, String subscribed) {
         assertNotNull(response);
         assertTrue(response.contains(subscribed));
-        assertTrue(response.contains(GrpcSmartClientManagerResourceStub.class.getSimpleName()));
-    }
-
-    private static Object waiter = new Object();
-
-    private static void waitFor(int millis) throws InterruptedException {
-        synchronized (waiter) {
-            waiter.wait(millis);
-        }
-    }
-
-    static void notifier() {
-        waiter.notifyAll();
     }
 }

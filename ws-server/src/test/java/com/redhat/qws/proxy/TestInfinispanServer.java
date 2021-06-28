@@ -1,6 +1,9 @@
 package com.redhat.qws.proxy;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,8 +28,8 @@ import org.jboss.logging.Logger;
 
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 
-public class InfinispanServerTestResource implements QuarkusTestResourceLifecycleManager {
-    private static final Logger LOGGER = Logger.getLogger(InfinispanServerTestResource.class);
+public class TestInfinispanServer implements QuarkusTestResourceLifecycleManager {
+    private static final Logger LOGGER = Logger.getLogger(TestInfinispanServer.class);
 
     String authRealm;
     String cacheName;
@@ -88,17 +91,26 @@ public class InfinispanServerTestResource implements QuarkusTestResourceLifecycl
     }
 
     private void realInit() throws Exception {
+        final String MAVEN_TARGET_DIR = "target";
+        final String INFINSPAN_PERSISTENCE_DIR = "infinispan-persistence";
+
         final long start = System.currentTimeMillis();
         loadProperties();
 
         // DefaultCacheManager cm = new DefaultCacheManager("infinispan.xml");
         final GlobalConfigurationBuilder gcb = new GlobalConfigurationBuilder();
         gcb.nonClusteredDefault();
-        gcb.globalState().enable().persistentLocation("infinispan-persistence", "target")
+
+        gcb.globalState().enable().persistentLocation(INFINSPAN_PERSISTENCE_DIR, MAVEN_TARGET_DIR)
                 .configurationStorage(ConfigurationStorage.CUSTOM)
                 .configurationStorageSupplier(() -> new VolatileLocalConfigurationStorage() {
                     @Override
                     public void validateFlags(java.util.EnumSet<CacheContainerAdmin.AdminFlag> flags) {
+                        final File infDir = new File(MAVEN_TARGET_DIR + "/" + INFINSPAN_PERSISTENCE_DIR);
+                        final String[] files = infDir.list();
+                        for (String f : files) {
+                            new File(f).delete();
+                        }
                     }
                 });
         final DefaultCacheManager cm = new DefaultCacheManager(gcb.build());
@@ -139,11 +151,9 @@ public class InfinispanServerTestResource implements QuarkusTestResourceLifecycl
     }
 
     public void stop() {
-        // do not stop infinispan server instance to avoid hotrod client complaint on
-        // junit test shutdown
-        // if (server != null) {
-        // server.stop();
-        // }
+        if (server != null) {
+            server.stop();
+        }
     }
 
     private static class HotRodServerProperties {
@@ -208,7 +218,7 @@ public class InfinispanServerTestResource implements QuarkusTestResourceLifecycl
                     return;
                 } else {
                     LOGGER.debugf("TEST PROFILE property ignored for %s: %s = %s",
-                            InfinispanServerTestResource.class.getSimpleName(), testKey, value);
+                            TestInfinispanServer.class.getSimpleName(), testKey, value);
                 }
             }
         }

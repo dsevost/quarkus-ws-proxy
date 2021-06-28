@@ -1,5 +1,5 @@
-# FROM image-registry.openshift-image-registry.svc:5000/dsevosty-quarkus-ws-dev/java-11-base
-FROM image-registry.openshift-image-registry.svc:5000/ds-quarkus-ws/java-11-base
+# FROM image-registry.openshift-image-registry.svc:5000/ds-quarkus-ws/java-11-base
+FROM image-registry.openshift-image-registry.svc:5000/ds-quarkus-ws-dev/java-11-base
 
 ENV \
     TRUST_STORE_PATH="/deployments/cert/trustStore.jks" \
