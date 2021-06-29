@@ -2,7 +2,6 @@ package com.redhat.qws.proxy.service;
 
 import java.util.concurrent.CompletableFuture;
 
-import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
 
