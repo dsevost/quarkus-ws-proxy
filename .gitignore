@@ -5,3 +5,6 @@
 **/mvnw*
 **/target/
 infinispan-integration-server
+keycloak
+**/README-*.md
+**/*example*md
