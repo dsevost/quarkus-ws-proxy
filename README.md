@@ -1,1 +1,1 @@
-This code is not perfect, it is for demo purposesonly.
+This code is not perfect, it is for demo purpose only.
