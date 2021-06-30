@@ -1,7 +1,0 @@
----
-credentials:
-- username: developer
-  password: <changeme>
-# additional credentials if needed
-#- username: datagrid
-#- password: <change-password-here>

@@ -1,8 +1,0 @@
----
-apiVersion: infinispan.org/v1
-kind: Infinispan
-metadata:
-  namespace: example-datagrid-instance
-  name: example-infinispan
-spec:
-  replicas: 1

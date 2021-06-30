@@ -39,3 +39,41 @@ Copy infinispan-localhost-simple-config.xml to server/conf/infinispan.xml of Inf
 ```
 cp manifest/infinispan-localhost-simple-config.xml $INFINISPAN_HOME/server/conf/infinispan.xml
 ```
+## Operator managed Datagrid
+### Clone openshift-day2 repo
+```shell script
+git clone https://github.com/rhte-ru/openshift4-day2 ocp
+```
+
+### Namespace preparation
+```shell script
+export NS=ds-quarkus-ws-dev
+
+export OPERATOR_NAME=datagrid
+export LABEL_KEY=operator.name
+export LABEL_VALUE=${OPERATOR_NAME}
+
+# create namespace if needed
+#bash ocp/base/bin/002-namespace-create.sh
+```
+
+### Manage OLM Subscription
+```shell script
+bash ocp/operator/bin/110-operatorgroup-create.sh
+
+export OPERATOR_CHANNEL=8.2.x
+export OPERATOR_INSTANCE=datagrid-ws
+
+bash ocp/operator/bin/120-operator-subscription.sh
+```
+
+### Doploy Datagrid instance
+```shell script
+bash ocp/operator/infinispan/bin/210-datagrid-identities.sh
+
+export KEYSTORE_PASSWORD=1234567890
+
+bash ocp/operator/infinispan/bin/220-datagrid-tls.sh
+
+bash ocp/operator/infinispan/bin/230-datagrid-deploy.sh ocp/operator/infinispan/manifest/datagrid-service.yaml
+```
